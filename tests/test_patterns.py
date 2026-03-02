@@ -1,7 +1,7 @@
 """Tests for action pattern classification."""
 
 from openclaw_edd.models import Event
-from openclaw_edd.patterns import ActionClassifier, BUILTIN_PATTERNS
+from openclaw_edd.patterns import BUILTIN_PATTERNS, ActionClassifier
 
 
 def test_classify_ls():
