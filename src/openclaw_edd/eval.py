@@ -19,6 +19,7 @@ from typing import Any, Optional, cast
 
 from . import session_reader, store
 from .models import EvalCase, EvalResult, Event
+from .patterns import ActionClassifier
 from .tracer import _is_turn_end
 
 # Built-in cases
@@ -361,6 +362,84 @@ def _check_retries(events: list[Event], max_retries: int | None) -> dict:
     }
 
 
+def _check_actions(
+    events: list[Event], expect_actions: list[str], classifier: ActionClassifier
+) -> dict:
+    """Check that expected semantic actions were performed."""
+    all_actions: set[str] = set()
+    action_details = []
+    for e in events:
+        if e.kind != "tool_end" or e.tool != "exec":
+            continue
+        cmd = e.input.get("command", "") if isinstance(e.input, dict) else ""
+        if not cmd:
+            continue
+        actions = classifier.classify(cmd)
+        all_actions.update(actions)
+        action_details.append({"command": cmd, "actions": actions})
+
+    missing = [a for a in expect_actions if a not in all_actions]
+    return {
+        "passed": len(missing) == 0,
+        "expected": expect_actions,
+        "observed": sorted(all_actions),
+        "missing": missing,
+        "details": action_details,
+    }
+
+
+def _check_actions_ordered(
+    events: list[Event], expect_ordered: list[str], classifier: ActionClassifier
+) -> dict:
+    """Check that semantic actions appeared in order."""
+    action_sequence = []
+    for e in events:
+        if e.kind != "tool_end" or e.tool != "exec":
+            continue
+        cmd = e.input.get("command", "") if isinstance(e.input, dict) else ""
+        if cmd:
+            actions = classifier.classify(cmd)
+            action_sequence.extend(actions)
+
+    idx = 0
+    for action in action_sequence:
+        if idx < len(expect_ordered) and action == expect_ordered[idx]:
+            idx += 1
+    return {
+        "passed": idx == len(expect_ordered),
+        "matched_count": idx,
+        "expected_count": len(expect_ordered),
+        "expected": expect_ordered,
+        "actual_sequence": action_sequence,
+    }
+
+
+def _check_plan_contains(events: list[Event], expect_keywords: list[str]) -> dict:
+    """Check that agent's plan text contains expected keywords.
+
+    plan_text is extracted from assistant messages that precede tool calls.
+    This validates that the agent's stated reasoning aligns with its actions.
+    """
+    # Collect all plan_text
+    all_plan_text = " ".join(e.plan_text for e in events if e.plan_text).lower()
+
+    if not all_plan_text:
+        return {
+            "passed": False,
+            "reason": "no_plan_text_found",
+            "expected": expect_keywords,
+            "plan_text_preview": "",
+        }
+
+    missing = [kw for kw in expect_keywords if kw.lower() not in all_plan_text]
+    return {
+        "passed": len(missing) == 0,
+        "expected": expect_keywords,
+        "missing": missing,
+        "plan_text_preview": all_plan_text[:500],  # Truncated for report
+    }
+
+
 def check_assertions(
     case: EvalCase, events: list[Event], final_output: str
 ) -> tuple[bool, list[str], dict[str, Any]]:
@@ -521,6 +600,72 @@ def check_assertions(
         if not retry_check["passed"]:
             failures.append(
                 f"Too many retries: max consecutive {retry_check['max_consecutive']} > limit {case.max_retries}"
+            )
+
+    # expect_actions (Gap 1: Tool Selection Semantics)
+    if case.expect_actions or case.expect_actions_ordered:
+        classifier = ActionClassifier(
+            builtin=True,
+            custom_file=case.action_patterns_file or None,
+        )
+        if case.expect_actions:
+            action_check = _check_actions(events, case.expect_actions, classifier)
+            checks["actions"] = action_check
+            if not action_check["passed"]:
+                failures.append(
+                    f"Missing expected actions: {', '.join(action_check['missing'])} "
+                    f"(observed: {', '.join(action_check['observed'])})"
+                )
+        if case.expect_actions_ordered:
+            order_check = _check_actions_ordered(
+                events, case.expect_actions_ordered, classifier
+            )
+            checks["actions_ordered"] = order_check
+            if not order_check["passed"]:
+                failures.append(
+                    f"Action order mismatch: expected {case.expect_actions_ordered}, "
+                    f"matched {order_check['matched_count']}/{order_check['expected_count']}"
+                )
+
+    # expect_plan_contains (Gap 2: Reasoning/Planning Alignment)
+    if case.expect_plan_contains:
+        plan_check = _check_plan_contains(events, case.expect_plan_contains)
+        checks["plan_contains"] = plan_check
+        if not plan_check["passed"]:
+            if plan_check.get("reason") == "no_plan_text_found":
+                failures.append(
+                    "Plan text not found in agent trajectory "
+                    f"(expected keywords: {', '.join(case.expect_plan_contains)})"
+                )
+            else:
+                failures.append(
+                    f"Plan text missing keywords: {', '.join(plan_check['missing'])}"
+                )
+
+    # Judge (Gap 3: Final Response Semantic Evaluation)
+    if case.judge_criteria and case.judge_model:
+        from .judge import judge_case
+
+        judge_result = judge_case(case, events, final_output)
+        checks["judge"] = judge_result
+
+        rule_passed = len(failures) == 0
+
+        if judge_result.get("error"):
+            # Judge 调用失败，不影响规则断言结果
+            pass
+        elif not rule_passed and judge_result.get("passed"):
+            # 规则断言 fail 但 judge pass → soft_fail，提示断言可能太紧
+            checks["judge"]["soft_fail"] = True
+            checks["judge"]["hint"] = (
+                "Rule assertions failed but LLM judge passed. "
+                "Consider relaxing assertions to use expect_actions instead of expect_commands."
+            )
+        elif rule_passed and not judge_result.get("passed"):
+            # 规则 pass 但 judge fail → 警告
+            checks["judge"]["warning"] = (
+                "Rule assertions passed but LLM judge detected issues. "
+                "Review the judge reasoning."
             )
 
     return len(failures) == 0, failures, checks

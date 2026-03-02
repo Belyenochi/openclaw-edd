@@ -97,3 +97,54 @@ def test_session_isolation_time_window():
     assert "inside" in cmds
     assert "old" not in cmds
     assert "new" not in cmds
+
+
+def test_plan_contains_pass():
+    events = [
+        Event(
+            kind="tool_end",
+            tool="exec",
+            input={"command": "curl -s https://api.open-meteo.com/..."},
+            plan_text="I'll check the weather in Shanghai using the API",
+        ),
+    ]
+    case = EvalCase(
+        id="plan_test",
+        message="",
+        expect_plan_contains=["weather", "shanghai"],
+    )
+    passed, failures, checks = eval_module.check_assertions(case, events, "")
+    assert passed
+    assert checks["plan_contains"]["passed"]
+
+
+def test_plan_contains_missing():
+    events = [
+        Event(
+            kind="tool_end",
+            tool="exec",
+            input={"command": "curl -s https://api.open-meteo.com/..."},
+            plan_text="Let me query the API",
+        ),
+    ]
+    case = EvalCase(
+        id="plan_test",
+        message="",
+        expect_plan_contains=["weather"],
+    )
+    passed, failures, checks = eval_module.check_assertions(case, events, "")
+    assert not passed
+
+
+def test_plan_contains_no_plan():
+    events = [
+        Event(kind="tool_end", tool="exec", input={"command": "ls"}),
+    ]
+    case = EvalCase(
+        id="plan_test",
+        message="",
+        expect_plan_contains=["list"],
+    )
+    passed, failures, checks = eval_module.check_assertions(case, events, "")
+    assert not passed
+    assert checks["plan_contains"]["reason"] == "no_plan_text_found"

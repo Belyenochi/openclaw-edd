@@ -50,6 +50,16 @@ class EvalCase:
     tags: list[str] = field(default_factory=list)
     description: str = ""
     max_retries: int | None = None  # Max allowed consecutive identical tool calls
+    # Task 1: Action Pattern assertions (Gap 1 - tool selection semantics)
+    expect_actions: list[str] = field(default_factory=list)
+    expect_actions_ordered: list[str] = field(default_factory=list)
+    action_patterns_file: str = ""
+    # Task 2: Plan assertions (Gap 2 - reasoning evaluation)
+    expect_plan_contains: list[str] = field(default_factory=list)
+    # Task 3: LLM Judge (Gap 3 - response quality)
+    judge_criteria: list[str] = field(default_factory=list)
+    judge_model: str = ""
+    judge_provider: str = ""
 
 
 @dataclass
