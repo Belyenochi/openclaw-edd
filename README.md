@@ -10,7 +10,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 Evaluation-Driven Development toolkit for OpenClaw agents.
-Zero-friction quality gates — log files as the single source of truth.
+Zero-friction quality gates — session files as the single source of truth.
 
 [中文文档](README_CN.md)
 
