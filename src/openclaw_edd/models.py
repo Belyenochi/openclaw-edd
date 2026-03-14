@@ -55,6 +55,7 @@ class EvalCase:
     tags: list[str] = field(default_factory=list)
     description: str = ""
     max_retries: int | None = None  # Max allowed consecutive identical tool calls
+    pass_at_k: int = 1  # Run case K times; passed if at least 1 attempt passes
     # Task 1: Action Pattern assertions (Gap 1 - tool selection semantics)
     expect_actions: list[str] = field(default_factory=list)
     expect_actions_ordered: list[str] = field(default_factory=list)
@@ -85,6 +86,11 @@ class EvalResult:
     total_input_tokens: int = 0
     total_output_tokens: int = 0
     total_cost: float = 0.0
+    # Pass@K fields (populated when pass_at_k > 1)
+    pass_at_k_k: int = 1
+    pass_at_k_passes: int = 0
+    pass_at_k_rate: float = 0.0
+    pass_at_k_session_ids: list = field(default_factory=list)
 
     @property
     def tool_names(self) -> list[str]:

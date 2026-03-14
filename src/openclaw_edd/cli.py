@@ -116,6 +116,13 @@ def main() -> None:
     run_parser.add_argument(
         "--summary-line", action="store_true", help="Print a single summary line"
     )
+    run_parser.add_argument(
+        "--pass-at-k",
+        type=int,
+        default=None,
+        metavar="K",
+        help="Run each case K times; passed if at least 1 attempt passes (overrides per-case setting)",
+    )
 
     gen_cases_parser = subparsers.add_parser("gen-cases", help="Generate case template")
     gen_cases_parser.add_argument("--output", help="Output file")

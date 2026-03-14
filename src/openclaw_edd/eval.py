@@ -784,6 +784,58 @@ def run_eval_case(
     )
 
 
+def run_eval_case_pass_at_k(
+    case: EvalCase,
+    k: int,
+    dry_run: bool,
+    log_dir: str,
+    use_local: bool = False,
+) -> EvalResult:
+    """Run a case K times and return an aggregated EvalResult.
+
+    passed = True if at least one attempt passes (pass@k semantics).
+    pass_at_k_rate = passes / k (stability metric).
+    """
+    attempts: list[EvalResult] = []
+    for _ in range(k):
+        attempt = run_eval_case(case, dry_run, log_dir, use_local)
+        attempts.append(attempt)
+
+    passes = sum(1 for a in attempts if a.passed)
+    any_passed = passes > 0
+    rate = passes / k
+
+    # Use the first passing attempt as the representative result (for tool chain, output, etc.)
+    # Fall back to last attempt if none passed.
+    representative = next((a for a in attempts if a.passed), attempts[-1])
+
+    total_input = sum(a.total_input_tokens for a in attempts)
+    total_output = sum(a.total_output_tokens for a in attempts)
+    total_cost = sum(a.total_cost for a in attempts)
+    session_ids = [a.session_id for a in attempts if a.session_id]
+
+    return EvalResult(
+        case=case,
+        passed=any_passed,
+        events=representative.events,
+        final_output=representative.final_output,
+        duration_s=sum(a.duration_s for a in attempts),
+        failures=[] if any_passed else representative.failures,
+        checks=representative.checks,
+        session_id=representative.session_id,
+        timestamp=representative.timestamp,
+        model=representative.model,
+        provider=representative.provider,
+        total_input_tokens=total_input,
+        total_output_tokens=total_output,
+        total_cost=total_cost,
+        pass_at_k_k=k,
+        pass_at_k_passes=passes,
+        pass_at_k_rate=rate,
+        pass_at_k_session_ids=session_ids,
+    )
+
+
 def _events_from_state(state: dict, session_id: str) -> list[Event]:
     """Build Event list from state file (compatible)"""
     events: list[Event] = []
@@ -940,9 +992,14 @@ def cmd_run(args: Any) -> None:
     if validation_only:
         print("ℹ Dry-run  session，cases，Message\n")
 
+    # --pass-at-k overrides individual case settings when provided
+    cli_pass_at_k = getattr(args, "pass_at_k", None)
+
     results = []
     for case in cases:
-        print(f"→ {case.id}: {case.message}")
+        k = cli_pass_at_k if cli_pass_at_k and cli_pass_at_k > 1 else case.pass_at_k
+        k_label = f" [pass@{k}]" if k > 1 else ""
+        print(f"→ {case.id}{k_label}: {case.message}")
 
         if validation_only:
             result = EvalResult(
@@ -956,6 +1013,14 @@ def cmd_run(args: Any) -> None:
                 session_id=None,
                 timestamp=datetime.now().isoformat(),
             )
+        elif k > 1:
+            result = run_eval_case_pass_at_k(
+                case,
+                k,
+                args.dry_run,
+                args.log_dir,
+                getattr(args, "local", False),
+            )
         else:
             result = run_eval_case(
                 case,
@@ -966,7 +1031,15 @@ def cmd_run(args: Any) -> None:
             )
         results.append(result)
 
-        if result.passed:
+        if result.pass_at_k_k > 1:
+            status = "✓ PASS" if result.passed else "✗ FAIL"
+            print(
+                f"  [{status}] pass@{result.pass_at_k_k}: "
+                f"{result.pass_at_k_passes}/{result.pass_at_k_k} "
+                f"({result.pass_at_k_rate * 100:.0f}%) "
+                f"total {result.duration_s:.1f}s"
+            )
+        elif result.passed:
             print(f"  [✓ PASS] {result.duration_s:.1f}s")
         else:
             print(f"  [✗ FAIL] {result.duration_s:.1f}s")
