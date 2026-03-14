@@ -280,15 +280,12 @@ PASS: mysql_basic_query ...
 
 ## 依赖说明
 
-- **零强制依赖** - 核心功能无需任何外部库
-- **可选依赖**:
-  - PyYAML（仅在使用 `--cases` 时需要）
-  - anthropic（仅在使用 `openclaw-edd judge` 时需要）
-
 ```bash
-pip install openclaw-edd[yaml]  # 安装 YAML 支持
-pip install openclaw-edd         # 包含 anthropic SDK
+pip install openclaw-edd
 ```
+
+- **PyYAML** — YAML 格式用例文件所需（`--cases cases.yaml`）
+- **anthropic** — `edd judge` 和 `edd suggest` 所需
 
 ## 平台支持
 

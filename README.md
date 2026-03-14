@@ -179,15 +179,12 @@ Priority:
 
 ## Dependencies
 
-- **Zero mandatory dependencies** - Core features work without any external libraries
-- **Optional dependencies**:
-  - PyYAML (only needed when using `--cases`)
-  - anthropic (only needed when using `edd judge`)
-
 ```bash
-pip install openclaw-edd[yaml]  # Install with YAML support
-pip install openclaw-edd         # Includes anthropic SDK
+pip install openclaw-edd
 ```
+
+- **PyYAML** — required for YAML case files (`--cases cases.yaml`)
+- **anthropic** — required for `edd judge` and `edd suggest`
 
 ## Platform Support
 
