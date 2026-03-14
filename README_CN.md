@@ -266,9 +266,8 @@ PASS: mysql_basic_query ...
 
 ## 数据源
 
-- **日志位置**: `/tmp/openclaw/openclaw-YYYY-MM-DD.log`
-- **格式**: JSON Lines
-- **State**: `~/.openclaw_eval/state/<session_id>.json`
+- **Session 文件**: `~/.openclaw/agents/<agent>/sessions/<session_id>.json` — 工具事件、LLM 决策、输出的主要来源
+- **State**: `~/.openclaw_eval/state/<session_id>.json` — session 文件不可用时的回退
 - **Artifacts**: `~/.openclaw_eval/artifacts/<session_id>/`
 
 ## Workspace 路径解析

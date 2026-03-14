@@ -165,9 +165,8 @@ PASS: mysql_basic_query ...
 
 ## Data Sources
 
-- **Log Location**: `/tmp/openclaw/openclaw-YYYY-MM-DD.log`
-- **Format**: JSON Lines
-- **State**: `~/.openclaw_eval/state/<session_id>.json`
+- **Session files**: `~/.openclaw/agents/<agent>/sessions/<session_id>.json` — primary source for tool events, LLM decisions, and output
+- **State**: `~/.openclaw_eval/state/<session_id>.json` — fallback when session file is unavailable
 - **Artifacts**: `~/.openclaw_eval/artifacts/<session_id>/`
 
 ## Workspace Path Resolution
