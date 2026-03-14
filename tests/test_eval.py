@@ -148,3 +148,69 @@ def test_plan_contains_no_plan():
     passed, failures, checks = eval_module.check_assertions(case, events, "")
     assert not passed
     assert checks["plan_contains"]["reason"] == "no_plan_text_found"
+
+
+# ---------------------------------------------------------------------------
+# load_cases with only_approved filter
+# ---------------------------------------------------------------------------
+
+
+def _write_jsonl(path: str, records: list) -> None:
+    import json
+
+    with open(path, "w", encoding="utf-8") as f:
+        for r in records:
+            f.write(json.dumps(r) + "\n")
+
+
+def test_load_cases_only_approved_filters(tmp_path):
+    from openclaw_edd import eval as eval_module
+
+    records = [
+        {
+            "id": "r1",
+            "reviewed": True,
+            "approved": True,
+            "conversation": [{"turn": 1, "user": "approved msg", "assert": []}],
+        },
+        {
+            "id": "r2",
+            "reviewed": True,
+            "approved": False,
+            "conversation": [{"turn": 1, "user": "rejected msg", "assert": []}],
+        },
+        {
+            "id": "r3",
+            "reviewed": False,
+            "conversation": [{"turn": 1, "user": "unreviewed msg", "assert": []}],
+        },
+    ]
+    f = tmp_path / "golden.jsonl"
+    _write_jsonl(str(f), records)
+
+    cases = eval_module.load_cases(str(f), only_approved=True)
+    assert len(cases) == 1
+    assert cases[0].message == "approved msg"
+
+
+def test_load_cases_without_only_approved_loads_all(tmp_path):
+    from openclaw_edd import eval as eval_module
+
+    records = [
+        {
+            "id": "r1",
+            "reviewed": True,
+            "approved": True,
+            "conversation": [{"turn": 1, "user": "msg1", "assert": []}],
+        },
+        {
+            "id": "r2",
+            "reviewed": False,
+            "conversation": [{"turn": 1, "user": "msg2", "assert": []}],
+        },
+    ]
+    f = tmp_path / "golden.jsonl"
+    _write_jsonl(str(f), records)
+
+    cases = eval_module.load_cases(str(f), only_approved=False)
+    assert len(cases) == 2

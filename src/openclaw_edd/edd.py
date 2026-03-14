@@ -840,6 +840,127 @@ def cmd_export(args: Any) -> None:
 
 
 # ============================================================================
+# review
+# ============================================================================
+
+
+def cmd_review(args: Any) -> None:
+    """Interactively review a mined golden dataset JSONL file.
+
+    For each unreviewed record, shows the message, tool chain, and output
+    preview, then prompts: [a]pprove / [r]eject / [s]kip / [q]uit.
+    Writes results back to the same file (or --output) after each decision
+    so the session can be safely interrupted and resumed.
+    """
+    input_path = Path(args.input)
+    output_path = Path(args.output) if args.output else input_path
+
+    if not input_path.exists():
+        print(f"✗ File not found: {input_path}")
+        sys.exit(1)
+
+    # Load all records
+    records: list[dict[str, Any]] = []
+    with open(input_path, "r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if line:
+                records.append(json.loads(line))
+
+    if not records:
+        print("✗ No records found")
+        sys.exit(1)
+
+    # Identify records to review
+    to_review = [(i, r) for i, r in enumerate(records) if not r.get("reviewed", False)]
+
+    if not to_review:
+        approved = sum(1 for r in records if r.get("approved", False))
+        print(f"✓ All {len(records)} records already reviewed ({approved} approved)")
+        return
+
+    print(f"📋 Golden Dataset Review")
+    print(f"   Total: {len(records)}  |  To review: {len(to_review)}")
+    print(f"   Keys: [a] approve  [r] reject  [s] skip  [q] quit\n")
+
+    def _save() -> None:
+        with open(output_path, "w", encoding="utf-8") as f:
+            for record in records:
+                f.write(json.dumps(record, ensure_ascii=False) + "\n")
+
+    approved_count = 0
+    rejected_count = 0
+    skipped_count = 0
+
+    for idx, (record_idx, record) in enumerate(to_review):
+        conv_list = record.get("conversation", [{}])
+        conv = conv_list[0] if conv_list else {}
+        user_msg = conv.get("user", record.get("message", ""))
+        golden_tools = conv.get("golden_tool_sequence", [])
+        tool_names = [str(t.get("name", "")) for t in golden_tools]
+        golden_output = conv.get("golden_output", "")
+
+        print(f"─── [{idx + 1}/{len(to_review)}] {record['id']} ───")
+        print(f"  Message : {user_msg}")
+        print(f"  Tools   : {' → '.join(tool_names) if tool_names else '(none)'}")
+        if golden_output:
+            preview = golden_output[:120].replace("\n", " ")
+            if len(golden_output) > 120:
+                preview += "..."
+            print(f"  Output  : {preview}")
+
+        assertions = conv.get("assert", [])
+        if assertions:
+            print(f"  Asserts : {len(assertions)} rules auto-generated")
+
+        while True:
+            try:
+                key = input("  > ").strip().lower()
+            except (EOFError, KeyboardInterrupt):
+                print("\n✗ Interrupted — saving progress")
+                _save()
+                sys.exit(0)
+
+            if key == "a":
+                record["reviewed"] = True
+                record["approved"] = True
+                record["reviewed_at"] = datetime.now().isoformat()
+                _save()
+                approved_count += 1
+                print("  ✓ Approved\n")
+                break
+            elif key == "r":
+                record["reviewed"] = True
+                record["approved"] = False
+                record["reviewed_at"] = datetime.now().isoformat()
+                _save()
+                rejected_count += 1
+                print("  ✗ Rejected\n")
+                break
+            elif key == "s":
+                skipped_count += 1
+                print("  — Skipped\n")
+                break
+            elif key == "q":
+                print(f"\n✓ Saved progress to {output_path}")
+                _save()
+                _print_review_summary(approved_count, rejected_count, skipped_count)
+                return
+            else:
+                print("  ? [a] approve  [r] reject  [s] skip  [q] quit")
+
+    print(f"✓ Review complete → {output_path}")
+    _print_review_summary(approved_count, rejected_count, skipped_count)
+
+
+def _print_review_summary(approved: int, rejected: int, skipped: int) -> None:
+    total = approved + rejected + skipped
+    print(
+        f"\n  Approved: {approved}  Rejected: {rejected}  Skipped: {skipped}  (of {total} reviewed this session)"
+    )
+
+
+# ============================================================================
 # Main entry
 # ============================================================================
 
@@ -858,6 +979,8 @@ def cmd_edd(args: Any) -> None:
         cmd_judge(args)
     elif args.edd_cmd == "export":
         cmd_export(args)
+    elif args.edd_cmd == "review":
+        cmd_review(args)
 
 
 # ============================================================================

@@ -45,7 +45,9 @@ BUILTIN_CASES: list[dict[str, Any]] = [
 ]
 
 
-def load_cases(cases_file: str | None = None) -> list[EvalCase]:
+def load_cases(
+    cases_file: str | None = None, only_approved: bool = False
+) -> list[EvalCase]:
     """Load test cases."""
     if not cases_file:
         return [EvalCase(**cast(dict[str, Any], c)) for c in BUILTIN_CASES]
@@ -56,9 +58,16 @@ def load_cases(cases_file: str | None = None) -> list[EvalCase]:
     if cases_path.suffix == ".jsonl":
         try:
             cases = []
+            skipped_unreviewed = 0
             with open(cases_path, "r", encoding="utf-8") as f:
                 for line in f:
                     record = json.loads(line)
+                    if only_approved:
+                        if not record.get("reviewed", False):
+                            skipped_unreviewed += 1
+                            continue
+                        if not record.get("approved", False):
+                            continue
                     # Convert golden dataset format to EvalCase
                     for conv in record.get("conversation", []):
                         case_data = {
@@ -111,6 +120,11 @@ def load_cases(cases_file: str | None = None) -> list[EvalCase]:
                                 ]
 
                         cases.append(EvalCase(**cast(dict[str, Any], case_data)))
+            if only_approved and skipped_unreviewed:
+                print(
+                    f"ℹ Skipped {skipped_unreviewed} unreviewed records "
+                    f"(run 'edd review' to review them)"
+                )
             return cases
         except Exception as e:
             print(f"✗ Failed to load JSONL cases: {e}")
@@ -975,7 +989,9 @@ def cmd_run(args: Any) -> None:
         with resources.as_file(quickstart_ref) as quickstart_path:
             cases = load_cases(str(quickstart_path))
     else:
-        cases = load_cases(args.cases)
+        cases = load_cases(
+            args.cases, only_approved=getattr(args, "only_approved", False)
+        )
 
     #  tags
     if args.tags:

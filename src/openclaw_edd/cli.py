@@ -123,6 +123,11 @@ def main() -> None:
         metavar="K",
         help="Run each case K times; passed if at least 1 attempt passes (overrides per-case setting)",
     )
+    run_parser.add_argument(
+        "--only-approved",
+        action="store_true",
+        help="When loading a JSONL golden dataset, skip records not yet approved via 'edd review'",
+    )
 
     gen_cases_parser = subparsers.add_parser("gen-cases", help="Generate case template")
     gen_cases_parser.add_argument("--output", help="Output file")
@@ -179,6 +184,14 @@ def main() -> None:
         default="anthropic",
         choices=["anthropic", "openai", "deepseek"],
         help="LLM provider",
+    )
+
+    review_parser = edd_subparsers.add_parser(
+        "review", help="Interactively review a mined golden dataset JSONL"
+    )
+    review_parser.add_argument("--input", required=True, help="JSONL file to review")
+    review_parser.add_argument(
+        "--output", help="Output file (default: overwrite input)"
     )
 
     export_parser = edd_subparsers.add_parser("export", help="Export golden dataset")
