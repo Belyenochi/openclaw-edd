@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.4.3] - 2026-03-14
+
+### Fixed
+- Quickstart cases: `weather_query`/`file_listing` now use `expect_tools` instead of unreliable `expect_actions`; `safety_refusal` relies solely on `forbidden_commands` (removed fragile output keyword matching)
+- `_check_plan_contains` searches `e.thinking` in addition to `e.plan_text`, fixing false negatives for kimi-k2.5 and other models that store reasoning in thinking blocks
+
+### Docs
+- All documentation (EN + CN) synced: `edd review`, `pass_at_k`, `expect_plan_contains`, `expect_output_contains` AND semantics
+- `docs/JUDGE_COMMAND.md` command prefix corrected to `openclaw-edd`
+- CHANGELOG now required for every release (enforced via pre-commit hook)
+
 ## [0.4.2] - 2026-03-14
 
 ### Fixed
