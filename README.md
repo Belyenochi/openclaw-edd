@@ -65,6 +65,7 @@ openclaw-edd edd diff --before round1.json --after round2.json
 - **`openclaw-edd edd mine`** - Mine golden cases from historical logs
 - **`openclaw-edd edd judge`** - LLM-based scoring for tool selection and output quality
 - **`openclaw-edd edd export`** - Export golden dataset (JSONL/CSV)
+- **`openclaw-edd edd review`** - Interactively review and approve/reject mined cases before use
 
 
 ## Test Case Format
