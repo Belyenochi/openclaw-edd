@@ -1,6 +1,6 @@
 {
-  "name": "openclaw-edd",
-  "version": "0.4.3",
+  "name": "@belyenochi/openclaw-edd",
+  "version": "0.5.0",
   "description": "Evaluation-Driven Development plugin for OpenClaw — save golden cases, catch skill regressions",
   "type": "module",
   "main": "src/index.ts",
@@ -30,6 +30,9 @@
     "edd"
   ],
   "license": "MIT",
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
   "dependencies": {
     "js-yaml": "^4.1.1"
   }

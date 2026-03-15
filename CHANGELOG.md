@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.5.0] - 2026-03-15
+
+### Added
+- npm package `@belyenochi/openclaw-edd` now published to GitHub Packages on every release
+
 ## [0.4.3] - 2026-03-14
 
 ### Fixed
