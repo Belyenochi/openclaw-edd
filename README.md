@@ -28,11 +28,10 @@ those recordings and tells you whether the good behaviors survived.
 **CLI — Trust comes from reproducible evidence, not one-off manual checks.**
 
 The plugin solves "I changed my skill, did I break something?" The
-CLI solves "why should anyone else trust that this skill works?" The
-same `edd.yaml` — built interactively with `/edd save` — runs unattended
-in CI via `openclaw-edd run`. A PR that regresses a golden case gets
-blocked. Skill quality stops depending on "the author says it works"
-and starts depending on repeatable proof.
+CLI takes that further: the same `edd.yaml` runs anywhere — a local
+terminal session, a team review, or a CI pipeline. Skill quality
+stops depending on "the author says it works" and starts depending
+on repeatable proof that anyone can run.
 
 ## Quick Start
 
