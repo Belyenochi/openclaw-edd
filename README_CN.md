@@ -86,6 +86,10 @@ openclaw-edd edd mine --output mined.yaml
 
 插件和 CLI 共享同一套 `edd.yaml` 格式。完整 EDD 闭环（`suggest` → `apply` → `diff` → `mine` → `judge` → `export`）见[用户指南](./USER_JOURNEY_CN.md)。
 
+## 参与贡献
+
+欢迎提问、讨论和 Pull Request。如果有什么不对劲或可以做得更好，开一个 Issue 就行——来自真实使用的反馈是这个项目进步的方式。
+
 ## License
 
 MIT

@@ -96,6 +96,10 @@ openclaw-edd edd mine --output mined.yaml
 
 The plugin and CLI share the same `edd.yaml` format. See the [User Guide](./USER_JOURNEY.md) for the full EDD loop (`suggest` → `apply` → `diff` → `mine` → `judge` → `export`).
 
+## Contributing
+
+Questions, ideas, and pull requests are welcome. If something doesn't work or could be better, open an issue — feedback from real usage is how this project improves.
+
 ## License
 
 MIT
