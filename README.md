@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="logo.jpg" alt="openclaw-edd logo" width="200">
+  <img src="logo.png" alt="openclaw-edd logo" width="600">
 </p>
 
 # openclaw-edd
